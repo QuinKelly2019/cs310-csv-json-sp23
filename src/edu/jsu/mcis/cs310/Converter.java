@@ -2,6 +2,9 @@ package edu.jsu.mcis.cs310;
 
 import com.github.cliftonlabs.json_simple.*;
 import com.opencsv.*;
+import java.io.*;
+import java.text.DecimalFormat;
+import java.util.*;
 
 public class Converter {
     
@@ -70,6 +73,10 @@ public class Converter {
         Exchange" lecture notes for more details, including examples.
         
     */
+    private static final String COL_HEADER_NAME = "ColHeadings";
+    private static final String ROW_HEADER_NAME = "ProdNums";
+    private static final String DATA_ROWS_NAME = "Data";
+    
     
     @SuppressWarnings("unchecked")
     public static String csvToJson(String csvString) {
@@ -78,14 +85,43 @@ public class Converter {
         
         try {
         
-            // INSERT YOUR CODE HERE
+            CSVReader reader = new CSVReader(new StringReader(csvString));
+            List<String[]> full = reader.readAll();
+            Iterator<String[]> iterator = full.iterator();
+            String[] currCSV_Row = iterator.next();
+            
+            JsonArray JA_DataArrays = new JsonArray();
+            JsonArray JA_RowHeaders = new JsonArray();
+            
+            JsonArray colHeadings = stringArrayToJsonArray(currCSV_Row);
+            
+            jsonOutputObject.put(COL_HEADER_NAME, colHeadings);
+            
+        while(iterator.hasNext()) {
+            currCSV_Row = iterator.next();
+            JA_RowHeaders.add(currCSV_Row[0]);
+            JsonArray JA_DataRow = new JsonArray();
+            
+            for(int i = 1; i < currCSV_Row.length; ++i){
+                if (i == colHeadings.indexOf("Episode") || i == colHeadings.indexOf("Season")){
+                    JA_DataRow.add(Integer.parseInt(currCSV_Row[i]));
+                } 
+                else{
+                    JA_DataRow.add(currCSV_Row[i]);
+                }
+            }
+            JA_DataArrays.add(JA_DataRow);
+        }   
+            
+            jsonOutputObject.put(ROW_HEADER_NAME, JA_RowHeaders);
+            jsonOutputObject.put(DATA_ROWS_NAME, JA_DataArrays);
             
         }
         catch (Exception e) {
             e.printStackTrace();
         }
         
-        return result.trim();
+        return jsonOutputObject.toJson().trim();
         
     }
     
@@ -96,15 +132,42 @@ public class Converter {
         
         try {
             
-            // INSERT YOUR CODE HERE
+            JsonObject originJsonObject = (JsonObject)Jsoner.deserialize(jsonString);
+            List<String[]> parsedRowArrays = new ArrayList<>();
+            StringWriter writer = new StringWriter();
+            CSVWriter csvWriter = new CSVWriter(writer, ',', '"', '\\', "\n");
+            List<String> colHeadings = (List)originJsonObject.get("ColHeadings");
+            csvWriter.writeNext( colHeadings.toArray(new String[0]));
+            
+            JsonArray JA_DataArrays = new JsonArray();
+            JsonArray JA_RowHeaders = new JsonArray();
+            
+            for (int i = 0; i < JA_RowHeaders.size(); ++i){
+                if (j == episodeIndex){
+                    rowdata.add(df.format(Integer.parseInt(data.get(j).toString())));
+                }
+                else{
+                    rowdata.add(data.get(j).toString());
+                }
+            }
+            
+            csvWriter.writeAll(parasedRowArrays);
+            result = writer.toString().trim();
             
         }
         catch (Exception e) {
             e.printStackTrace();
         }
         
-        return result.trim();
+        return result;
         
+    }
+    private static JsonArray stringArrayToJsonArray(String[] SA){
+        JsonArray JA = new JsonArray();
+        for(int i = 0; i < SA.length; ++i){
+            JA.add(SA[i]);
+        }
+        return JA;
     }
     
 }
